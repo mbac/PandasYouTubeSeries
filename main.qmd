@@ -1,0 +1,98 @@
+---
+title: "Quarto Basics"
+format:
+  html:
+    code-fold: show
+jupyter: python3
+# engine: knitr
+---
+
+
+```{python}
+
+import pandas as pd
+
+```
+
+
+```{python}
+
+df = pd.read_csv('world_population.csv')
+
+df.head()
+
+```
+
+## Indexing (basic)
+
+The `.loc` and `.iloc` methods are used for indexing in pandas. The `.loc` method is used for label-based indexing, while the `.iloc` method is used for integer-based indexing.
+
+When filtering for data values, you can use a condition in the index brackets, e.g. `countries[countries['Country'] == 'Afghanistan']`.
+```{python}
+
+df.loc[df['Country'] == 'Afghanistan']
+
+```
+
+Set an index and work from there:
+
+```{python}
+
+df2 = df.set_index('Country')
+```
+
+## Filtering
+
+This is because, I think, `.filter()` works on a dataframe with an index. Would it work on a non-index column?
+
+I don't know. Selecting `axis=1` means we're searching values along the horizontal headers; 
+
+```{python}
+df2.filter(items = ['Country', 'Continent', 'Capital'], axis=1)
+```
+
+`axis=0` would be along the vertical index (countries, in this case)
+
+```{python}
+df2.filter(items = ['Italy'], axis=0)
+```
+
+Filter on the index column:
+
+```{python}
+df2.filter(like='United', axis=0)
+```
+
+Select countries based on column values tested against a list.
+
+Get a specific value of the index--Note that this method works on a Series, hence the single brackets.
+
+```{python}
+df2.loc['United States']
+```
+
+If you want to look for the integer index value (i.e., the `nth` row), use `.iloc[]` instead of `.loc[]`.
+
+```{python}
+df2.iloc[6]
+
+# Get the index value corresponding to .iloc 6:
+df2.index[6]
+```
+
+Note that this changes with sorting. Or does it?
+
+```{python}
+
+country_list = ['Bangladesh', 'Brazil']
+
+df[df['Country'].isin(country_list)]
+
+```
+
+Select if a search string is in the column:
+
+```{python}
+
+df[df['Country'].str.contains('United')]
+```
