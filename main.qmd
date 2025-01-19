@@ -38,16 +38,83 @@ Set an index and work from there:
 
 ```{python}
 
-df2 = df.set_index('Country')
+df5 = df.set_index('Country', inplace=False)
+df5.sort_index(inplace=True, ascending=False)
+df5
 ```
 
+When you reset the index, the incumbent index is added as a column._ From where do the integer values come?_ They are the row numbers resulting from the last `.set_index()` operation. Check this out:
+
+```{python}
+# Sort by index (country) ascending
+df5.sort_index(inplace=True, ascending=True)
+# Look at row numbers here: Afghanistan is 0
+df5.reset_index(inplace=True)
+df5.iloc[0]
+```
+
+```{python}
+# Re-add the index
+df5.set_index('Country', inplace=True)
+# Sort in reverse with respect to previous index
+df5.sort_index(inplace=True, ascending=False)
+# Look at row numbers here: Afghanistan is 233
+df5.reset_index(inplace=True)
+
+df5
+```
+
+Get a specific value of the index--Note that this method works on a Series, hence the single brackets.
+
+```{python}
+
+df2 = df.set_index('Country', inplace=False)
+df2.loc['United States']
+```
+
+If you want to look for the integer index value (i.e., the `nth` row), use `.iloc[]` instead of `.loc[]`.
+
+```{python}
+df2.iloc[6]
+
+# Get the index value corresponding to .iloc 6:
+df2.index[6]
+```
+
+Note that this changes with sorting. Or does it?
+
+### MultiIndex
+
+
+```{python}
+df2.reset_index(inplace=True)
+df2.set_index(['Continent', 'Country'], inplace=True)
+df2.sort_index(inplace=True, ascending=[True, False])
+df2
+```
+
+You can access the outer index as always. If you want more than one item from any one index level, you must use a list because a second element in the outer list means you're accessing the second index.
+
+Working on outer index:
+```{python}
+df2.loc['Africa']
+df2.loc[['Africa', 'Europe']]
+```
+
+Accessing inner index (note outer list is flat):
+```{python}
+df2.loc['Africa', 'Algeria']
+```
 ## Filtering
 
 This is because, I think, `.filter()` works on a dataframe with an index. Would it work on a non-index column?
 
-I don't know. Selecting `axis=1` means we're searching values along the horizontal headers; 
+I don't know. Selecting `axis=1` means we're searching values along the horizontal headers;
 
 ```{python}
+
+df2 = df.set_index('Country', inplace = False)
+
 df2.filter(items = ['Country', 'Continent', 'Capital'], axis=1)
 ```
 
@@ -65,23 +132,6 @@ df2.filter(like='United', axis=0)
 
 Select countries based on column values tested against a list.
 
-Get a specific value of the index--Note that this method works on a Series, hence the single brackets.
-
-```{python}
-df2.loc['United States']
-```
-
-If you want to look for the integer index value (i.e., the `nth` row), use `.iloc[]` instead of `.loc[]`.
-
-```{python}
-df2.iloc[6]
-
-# Get the index value corresponding to .iloc 6:
-df2.index[6]
-```
-
-Note that this changes with sorting. Or does it?
-
 ```{python}
 
 country_list = ['Bangladesh', 'Brazil']
@@ -96,3 +146,51 @@ Select if a search string is in the column:
 
 df[df['Country'].str.contains('United')]
 ```
+
+## Sorting
+
+You can sort by columns content:
+```{python}
+df.head()
+
+df.sort_values(by='Rank')
+
+# Multiple columns:
+df.sort_values(by=['Rank', 'Country'])
+```
+
+Sorting by index, especially if `inplace`, can be more efficient, though it might be less intuitive. However, one can set the index to something else, sort by that, and then reset the index.
+```{python}
+df3 = df.set_index('Area (km²)', inplace=False)
+
+df
+```
+
+Also, check `DataFrame.index.is_monotonic_increasing` and `DataFrame.index.is_monotonic_decreasing`: if true, then the index is already sorted. If for any reason the df is already sorted, it saves huge amount of time.
+```{python}
+if not df3.index.is_monotonic_increasing:
+   df3.sort_index(inplace=True)
+df3
+
+```
+
+To reset the index means to send back the index data to the columns and create a new integer index based on current row order (or, rather, only leave the integer index in place, moving labels back to column data).
+
+```{python}
+df3.reset_index(inplace=True)
+df3
+
+# Move 'Area (km²)' column to the right of 'Rank'
+df3.insert(loc=df3.columns.get_loc('Rank') + 1, column='Area (km²)', value=df3.pop('Area (km²)'))
+df3
+```
+
+Multiple combinations of sorting criteria and options:
+
+```{python}
+df4 = df
+df4.sort_values(by=['Continent', 'Country'], ascending=[True, False], inplace=True)
+df4
+```
+
+Continent is sorted ascending (Africa first), then by country descending (Zimbabwe first). Criteria can be lists, with corresponding options list.
