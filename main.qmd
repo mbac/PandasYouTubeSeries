@@ -11,6 +11,8 @@ jupyter: python3
 ```{python}
 
 import pandas as pd
+# Add thousands separator with 2 decimal places
+pd.set_option('display.float_format', '{:,.2f}'.format)
 
 ```
 
@@ -194,3 +196,415 @@ df4
 ```
 
 Continent is sorted ascending (Africa first), then by country descending (Zimbabwe first). Criteria can be lists, with corresponding options list.
+
+## Group By and Aggregating
+
+
+```{python}
+import pandas as pd
+
+df = pd.read_csv('Flavors.csv')
+df
+```
+
+Group by base flavor. It is not in place so we save to another variable.
+
+```{python}
+
+gdf = df.groupby('Base Flavor')
+```
+
+You then apply a summarizing function by group:
+
+```{python}
+
+gdf.mean(numeric_only=True)
+```
+
+When you apply a method having an output, you can also use one-liners:
+
+```{python}
+df.groupby('Base Flavor').mean(numeric_only=True)
+```
+
+Count:
+
+```{python}
+df.groupby('Base Flavor').count()
+```
+
+This one accepts non-numeric values by default, which can be moderately useful (alphabetical order) but also very confusing:
+
+```{python}
+df.groupby('Base Flavor').min()
+```
+```{python}
+df.groupby('Base Flavor').min(numeric_only=True)
+```
+
+Group-by sum:
+
+```{python}
+df.groupby('Base Flavor').sum(numeric_only=True)
+```
+
+### Master aggregation
+This is done with the `.agg()` method on GroupBy objects. You specify a dictionary where the key is a column name, the value is the function you want to use to aggregate:
+
+```{python}
+df.groupby('Base Flavor').agg(
+  {'Flavor Rating': 
+      ['mean', 'max', 'count', 'sum'],
+    'Texture Rating':
+      ['mean', 'max', 'count', 'sum']
+  })
+```
+
+Group by multiple columns
+```{python}
+df.groupby(['Base Flavor', 'Liked']).agg(
+  {
+    'Flavor Rating': ['mean']
+  }
+)
+```
+
+Describe, as a shortcut:
+
+
+```{python}
+df.groupby(['Base Flavor', 'Liked']).describe()
+```
+
+## Merge and Joins
+
+
+```{python}
+df1 = pd.read_csv('LOTR.csv')
+df2 = pd.read_csv('LOTR 2.csv')
+
+df1
+```
+
+```{python}
+df2
+```
+
+### Merges:
+
+An left (inner) merge is the intersection of the 2 datasets; by default, it runs on all common data columns--`FellowshipID` and `FirstName` in this case.
+```{python}
+df1.merge(df2)
+```
+
+You can select one (or more?) specific keys. In this case, if there are other common columns they will be added to the `df` with names specifying whether they come from the left (`_x`) or right (`_y`) table.
+
+```{python}
+
+df1.merge(df2, how='inner', on='FellowshipID')
+
+```
+
+```{python}
+
+df1.merge(df2, how='inner', on=['FellowshipID', 'FirstName'])
+
+df1
+```
+
+Include all data (NaN's) where there are no matches between either table.
+
+```{python}
+
+df1.merge(df2, how='outer')
+
+```
+
+Left outer merge--all data from left table along with any matching data from the right one.
+
+```{python}
+
+df1.merge(df2, how='left')
+ 
+```
+
+Same, opposite side:
+
+```{python}
+
+df1.merge(df2, how='right')
+
+```
+
+A cross merge compares each element in the left table to each element in the right one.
+
+```{python}
+
+df1.merge(df2, how='cross')
+
+```
+
+## Joins
+Joins have fewer defaults and are more finicky.
+
+```{python}
+# df1.join(df2, on = "FellowshipID") # This will fail
+
+df1.join(df2, on = 'FellowshipID', how='outer', lsuffix='_left', rsuffix='_right') # This is quite ridiculous
+
+```
+
+Joins work on indices; one can make them work on columns but then it's way more convenient to use `df.merge()`. When working on indices, `df.join()` is faster.
+
+This is the innie:
+
+```{python}
+
+df6 = df1.set_index('FellowshipID').join(df2.set_index('FellowshipID'), lsuffix='_left', rsuffix='_right')
+
+df6
+```
+
+This is the outie:
+
+
+```{python}
+
+df6 = df1.set_index('FellowshipID').join(df2.set_index('FellowshipID'), lsuffix='_left', rsuffix='_right', how='outer')
+
+df6
+```
+
+## Concatenation
+Concatenation is the most straightforward: one on top of the other. However, the columns must match and there can be both duplicates and missing data if the same keys are in both dataframes, but these don't contain the same data.
+
+```{python}
+pd.concat([df1, df2])
+```
+
+There are options you can use in `pd.concat()` to handle this:
+
+Inner joins only keep the columns that are in both dataframes, one on top of the other of course.
+```{python}
+pd.concat([df1, df2], join='inner')
+```
+
+Outer-join concats keep all rows and colums (default?)
+
+```{python}
+
+pd.concat([df1, df2], join='outer')
+
+```
+
+However you can concat on the 1 axis, which is the columns. This is useful if you have two dataframes with the same index, but different columns.
+
+```{python}
+
+pd.concat([df1, df2], join='inner', axis=1)
+
+```
+
+You can also `DataFrame.append()` which is the same as `pd.concat()` but with the axis set to 0. It's also deprecated.
+
+## Visualizations
+
+
+```{python}
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+```
+
+
+```{python}
+
+df = pd.read_csv('Ice Cream Ratings.csv')
+df.set_index('Date', inplace=True)
+df.head()
+
+```
+
+Line plots and subplots:
+
+```{python}
+df.plot(kind = 'line')
+plt.show()
+```
+```{python}
+df.plot(kind = 'line', subplots=True,
+  title='Ice Cream Ratings',
+  xlabel='Date',
+  ylabel='Rating')
+plt.show()
+```
+```{python}
+df.plot(kind='bar', stacked=True)
+```
+```{python}
+df['Flavor Rating'].plot(kind='bar', stacked=True)
+```
+
+Horizontal bars are a function to themselves:
+
+```{python}
+df.plot(kind='barh', stacked=True)
+```
+
+Scatterplot:
+
+```{python}
+df.plot(kind='scatter', 
+  x='Texture Rating',
+  y='Overall Rating',
+  s=100)
+```
+
+Many plots are also functions:
+
+```{python}
+df.plot.area(figsize=(10, 5))
+```
+
+Styles are important:
+
+```{python}
+print(plt.style.available)
+
+plt.style.use('ggplot')
+df.plot.area(figsize=(10, 5))
+```
+
+## Data Cleaning
+
+Data cleaning/wrangling.
+
+
+```{python}
+df = pd.read_excel('Customer Call List.xlsx')
+df.head()
+```
+
+Drop dupes:
+
+```{python}
+df = df.drop_duplicates()
+df
+```
+
+Drop cols:
+
+```{python}
+df = df.drop(columns='Not_Useful_Column')
+df 
+```
+
+You can strip strings from left, right or both using `strip()`. By default it only removes spaces; or, you can specify specific characters to remove, one after the other. Regexp not supported.
+
+```{python}
+df['Last_Name'] = df['Last_Name'].str.strip('./_')
+df
+```
+
+Regexp supported:
+
+```{python}
+df['Last_Name'] = df['Last_Name'].str.replace('[^a-zA-Z]', '', regex=True)
+df
+```
+
+More on replace:
+
+Here we remove all non-numeric, non-letter characters. We're keeping letters from, say, 'N/A' because the moron leading the tutorial said so.
+```{python}
+df['Phone_Number'] = df['Phone_Number'].str.replace('[^a-zA-Z0-9]', '', regex=True)
+df
+```
+
+To manipulate strings serially, a lambda may be used. Here, we first convert each element to a string, then format it as a phone number. To be noted: this is not vectorialized as it would be in R, nor is it technically a loop. Lambda's are no more efficient than functions, but in this case it probably is as it obviates the need for an official loop.
+
+```{python}
+df['Phone_Number'] = df['Phone_Number'].apply(lambda x: str(x))
+
+
+df['Phone_Number'] = df['Phone_Number'].apply(lambda x: x[0:3] + '-' + x[3:6] + '-' + x[6:10])
+```
+
+Remove residual strings:
+
+```{python}
+df['Phone_Number'] = df['Phone_Number'].str.replace('[a-zA-Z]|-{2,}', '', regex=True)
+df
+```
+
+### Splitting columns into more values
+
+Classic string splitting:
+
+```{python}
+df['Address'].str.split(',', n=2, expand=True)
+
+```
+
+In its simplest form, split creates new columns with a new index. You can assign these columns to a list of existing or on-the-fly columns.
+
+```{python}
+df[['Street_Address', 'State', 'Zip_Code']] = df['Address'].str.split(',', n=2, expand=True)
+df
+
+```
+
+Fix yes's and no's:
+
+```{python}
+df['Paying Customer'] = df['Paying Customer'].str.replace('Yes', 'Y')
+df['Paying Customer'] = df['Paying Customer'].str.replace('No', 'N')
+df['Do_Not_Contact'] = df['Do_Not_Contact'].str.replace('Yes', 'Y')
+df['Do_Not_Contact'] = df['Do_Not_Contact'].str.replace('No', 'N')
+df
+```
+
+Replace dataframe-wide:
+
+```{python}
+df.replace('N/a', np.nan, inplace=True)
+df.replace(np.nan, '', inplace=True)
+df
+```
+
+Select rows unless phone number missing or do-not-contact is Y. Again, no vectorialization here, we loop:
+
+```{python}
+
+for x in df.index:
+    if df.loc[x, "Phone_Number"] == "" or df.loc[x, "Do_Not_Contact"] == "Y":
+        df.drop(x, inplace=True)
+
+df
+
+```
+
+The index now has missing values. If you just reindex and there _is_ an index, it is maintained. To reset it completely, drop the preceding index.
+
+```{python}
+df.reset_index(drop=True, inplace=True)
+df
+```
+
+## Exploratory Data Analysis
+
+
+```{python}
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+
+pd.set_option('display.float.format')
+
+df = pd.read_csv("world_population.csv")
+df.head()
+```
+
